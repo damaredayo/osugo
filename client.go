@@ -26,24 +26,26 @@ type ClientAuth struct {
 
 func NewClient(id, secret string) (*Client, error) {
 	client := &Client{
-		http: http.DefaultClient,
+		http:   http.DefaultClient,
+		id:     id,
+		secret: secret,
 	}
-	err := client.FetchToken()
+	err := client.FetchToken(id, secret)
 	if err != nil {
 		return nil, err
 	}
 	return client, nil
 }
 
-func (c *Client) FetchToken() error {
+func (c *Client) FetchToken(id, secret string) error {
 	data := struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 		GrantType    string `json:"grant_type"`
 		Scope        string `json:"scope"`
 	}{
-		ClientID:     c.id,
-		ClientSecret: c.secret,
+		ClientID:     id,
+		ClientSecret: secret,
 		GrantType:    "client_credentials",
 		Scope:        "public",
 	}
@@ -68,6 +70,7 @@ func (c *Client) FetchToken() error {
 	}
 
 	json.Unmarshal(bytes, auth)
+	c.auth = auth
 	return nil
 }
 
@@ -95,7 +98,7 @@ func (c *Client) request(method string, path string, params map[string]string, i
 	}
 	switch resp.StatusCode {
 	case 401:
-		err := c.FetchToken()
+		err := c.FetchToken(c.id, c.secret)
 		if err != nil {
 			return nil, err
 		}
