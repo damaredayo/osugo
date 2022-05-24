@@ -3,14 +3,17 @@ package osugo
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
 
+var ErrNoAuth = fmt.Errorf("no auth object")
+
 type Client struct {
 	id     string
 	secret string
-	apiKey string
+	auth   *ClientAuth
 
 	http *http.Client
 }
@@ -69,11 +72,15 @@ func (c *Client) FetchToken() error {
 }
 
 func (c *Client) request(method string, path string, params map[string]string, in []byte) (body io.ReadCloser, err error) {
+	if c.auth == nil {
+		return nil, ErrNoAuth
+	}
+
 	req, err := http.NewRequest(method, BASE_URL+path, bytes.NewBuffer(in))
 	if err != nil {
 		return
 	}
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.auth.AccessToken)
 	req.Header.Set("User-Agent", "osugo")
 
 	q := req.URL.Query()
