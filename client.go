@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 var ErrNoAuth = fmt.Errorf("no auth object")
@@ -13,7 +14,7 @@ var ErrNoAuth = fmt.Errorf("no auth object")
 type Client struct {
 	id     string
 	secret string
-	auth   *ClientAuth
+	Auth   *ClientAuth
 
 	http *http.Client
 }
@@ -62,20 +63,17 @@ func (c *Client) FetchToken(id, secret string) error {
 	}
 	defer resp.Body.Close()
 
-	var auth *ClientAuth
-
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
-	json.Unmarshal(bytes, auth)
-	c.auth = auth
+	json.Unmarshal(bytes, &c.Auth)
 	return nil
 }
 
 func (c *Client) request(method string, path string, params map[string]string, in []byte) (body io.ReadCloser, err error) {
-	if c.auth == nil {
+	if c.Auth == nil {
 		return nil, ErrNoAuth
 	}
 
@@ -83,7 +81,9 @@ func (c *Client) request(method string, path string, params map[string]string, i
 	if err != nil {
 		return
 	}
-	req.Header.Set("Authorization", "Bearer "+c.auth.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+c.Auth.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "osugo")
 
 	q := req.URL.Query()
@@ -97,12 +97,20 @@ func (c *Client) request(method string, path string, params map[string]string, i
 		return nil, err
 	}
 	switch resp.StatusCode {
+	case 200:
 	case 401:
 		err := c.FetchToken(c.id, c.secret)
 		if err != nil {
 			return nil, err
 		}
 		return c.request(method, path, params, in)
+	case 429:
+		// professional ratelimiting solution :D
+		time.Sleep(time.Second * 5)
+		return c.request(method, path, params, in)
+
+	default:
+		return nil, fmt.Errorf("%s %s: %s", method, path, resp.Status)
 	}
 	body = resp.Body
 	return

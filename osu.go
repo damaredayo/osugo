@@ -42,6 +42,7 @@ const (
 	GamemodeTaiko    Gamemode = "taiko"
 	GamemodeCatch    Gamemode = "fruits"
 	GamemodeMania    Gamemode = "mania"
+	GamemodeDefault  Gamemode = ""
 )
 
 func (g Gamemode) Description() string {
@@ -87,5 +88,18 @@ const (
 )
 
 func (t GetUserBeatmapsType) String() string {
+	return string(t)
+}
+
+type RankingType string
+
+const (
+	RankingTypeCharts      RankingType = "charts"
+	RankingTypeCountry     RankingType = "country"
+	RankingTypePerformance RankingType = "performance"
+	RankingTypeScore       RankingType = "score"
+)
+
+func (t RankingType) String() string {
 	return string(t)
 }
