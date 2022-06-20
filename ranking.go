@@ -68,7 +68,7 @@ type RankingUser struct {
 	Cover         Cover       `json:"cover"`
 }
 
-func (c *Client) GetRankings(mode Gamemode, rankingType RankingType, country string, maxPages int) (rankings []*RankingEntry, err error) {
+func (c *Client) GetRankings(mode Gamemode, rankingType RankingType, country string, startPage, endPage int) (rankings []*RankingEntry, err error) {
 	params := map[string]string{}
 	rankings = make([]*RankingEntry, 0)
 
@@ -76,11 +76,19 @@ func (c *Client) GetRankings(mode Gamemode, rankingType RankingType, country str
 		params["country"] = country
 	}
 
-	if maxPages > 200 {
-		maxPages = 200
+	if endPage > 200 {
+		endPage = 200
 	}
 
-	for i := 1; i <= maxPages; i++ {
+	if startPage < 1 {
+		startPage = 1
+	}
+
+	if startPage > endPage {
+		startPage = endPage
+	}
+
+	for i := startPage; i <= endPage; i++ {
 		params["page"] = strconv.Itoa(i)
 		b, err := c.request(http.MethodGet, "rankings/"+mode.String()+"/"+rankingType.String(), params, nil)
 		if err != nil {
